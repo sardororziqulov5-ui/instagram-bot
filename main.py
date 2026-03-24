@@ -1,7 +1,7 @@
 import telebot
 
 TOKEN = "8706039149:AAHnsjBVDizdUrlxQ-j4ZBB2EFbYgskRKcM"
-CHANNEL = "@kanal_username"  # majburiy obuna kanaling
+CHANNEL = "@bass_music_33"  # majburiy obuna kanaling
 
 bot = telebot.TeleBot(TOKEN)
 
