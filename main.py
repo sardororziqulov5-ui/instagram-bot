@@ -2,7 +2,7 @@ import telebot
 from telebot import types
 import yt_dlp
 import os
-TOKEN = os.getenv("8365844973:AAFB-ufQnsukAQipVMaB0Z2uEwVpXIY3FEk")
+TOKEN = "8365844973:AAFB-ufQnsukAQipVMaB0Z2uEwVpXIY3FEk"
 CHANNEL = "@bass_music_33"
 
 bot = telebot.TeleBot(TOKEN)
