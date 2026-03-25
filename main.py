@@ -2,9 +2,7 @@ import telebot
 from telebot import types
 import yt_dlp
 import os
-
-# 🔐 TOKEN endi yashirin (Render -> Environment)
-TOKEN = os.getenv("TOKEN")
+TOKEN = os.getenv("8365844973:AAFB-ufQnsukAQipVMaB0Z2uEwVpXIY3FEk")
 CHANNEL = "@bass_music_33"
 
 bot = telebot.TeleBot(TOKEN)
