@@ -2,18 +2,10 @@ import telebot
 from telebot import types
 import yt_dlp
 import os
+
 TOKEN = "8613087756:AAHsVgfWRoeg_FkBe5CxnuqMC69kb--SZw0"
-CHANNEL = "@bass_music_33"
 
 bot = telebot.TeleBot(TOKEN)
-
-# 🔒 OBUNA TEKSHIRISH
-def check_sub(user_id):
-    try:
-        m = bot.get_chat_member(CHANNEL, user_id)
-        return m.status in ["member", "administrator", "creator"]
-    except:
-        return False
 
 # 🎵 BASS
 def bass_boost(inp, out, level):
@@ -26,30 +18,11 @@ def audio_3d(inp, out):
 # 🚀 START
 @bot.message_handler(commands=['start'])
 def start(message):
-    if not check_sub(message.from_user.id):
-        m = types.InlineKeyboardMarkup()
-        m.add(types.InlineKeyboardButton("📢 Obuna", url="https://t.me/bass_music_33"))
-        m.add(types.InlineKeyboardButton("✅ Tekshirish", callback_data="check"))
-        bot.send_message(message.chat.id, "❗ Kanalga obuna bo‘ling", reply_markup=m)
-        return
-
     bot.send_message(message.chat.id, "🔗 Link yubor (YouTube / Instagram / TikTok)")
-
-# 🔄 CHECK
-@bot.callback_query_handler(func=lambda c: c.data == "check")
-def check(call):
-    if check_sub(call.from_user.id):
-        bot.send_message(call.message.chat.id, "✅ Tasdiqlandi")
-    else:
-        bot.answer_callback_query(call.id, "❌ Obuna bo‘l")
 
 # 🔗 MENU
 @bot.message_handler(func=lambda m: True)
 def menu(message):
-    if not check_sub(message.from_user.id):
-        bot.send_message(message.chat.id, "❗ Obuna bo‘ling!")
-        return
-
     url = message.text
 
     markup = types.InlineKeyboardMarkup()
