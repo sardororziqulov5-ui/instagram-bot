@@ -2,3 +2,5 @@ pyTelegramBotAPI
 yt-dlp
 flask
 gunicorn
+requests
+g4f
