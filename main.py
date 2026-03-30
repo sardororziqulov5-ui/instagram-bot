@@ -1,107 +1,96 @@
 import telebot
 import os
 import yt_dlp
+import requests
 from telebot import types
 from flask import Flask
 from threading import Thread
+from g4f.client import Client # Bepul GPT uchun
 
-# --- RENDER UCHUN WEB SERVER (O'CHIB QOLMASLIGI UCHUN) ---
+# --- SERVER ---
 app = Flask('')
-
 @app.route('/')
-def home():
-    return "Sardor😎 Bot is Live!"
+def home(): return "Sardor ai's Free AI Bot is Live!"
+def run(): app.run(host='0.0.0.0', port=8080)
+def keep_alive(): Thread(target=run).start()
 
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
-
-# --- ASOSIY MA'LUMOTLAR ---
+# --- SOZLAMALAR ---
 TOKEN = '8764022556:AAGblrMJUH3gkAdwJUgiJOmoZQTwtc4v5uo'
-REQUIRED_CHANNEL = '@bass_music_33'
-PROG_CHANNEL_URL = 'https://t.me/kompyuter_dasturi_001'
-
 bot = telebot.TeleBot(TOKEN)
+client = Client()
 
-# --- DOIMIY TUGMA (REPLY KEYBOARD) ---
 def main_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn = types.KeyboardButton("💻 Kompyuter dasturlari")
-    markup.add(btn)
+    markup.row("🎨 Rasm yaratish", "🤖 AI bilan suhbat")
+    markup.row("🔍 Musiqa qidirish", "💻 Kompyuter dasturlari")
     return markup
 
-# --- OBUNANI TEKSHIRISH FUNKSIYASI ---
-def is_subscribed(user_id):
-    try:
-        status = bot.get_chat_member(REQUIRED_CHANNEL, user_id).status
-        return status in ['member', 'administrator', 'creator']
-    except:
-        return False
+# --- 1. BEPUL AI SUHBATDOSH ---
+@bot.message_handler(func=lambda m: m.text == "🤖 AI bilan suhbat")
+def ai_mode(message):
+    bot.reply_to(message, "Savolingizni yozing, men AI orqali javob beraman! 🧠")
 
-# --- BUYRUQLAR VA XABARLAR ---
+# --- 2. BEPUL RASM YARATISH (Pollinations API) ---
+@bot.message_handler(func=lambda m: m.text == "🎨 Rasm yaratish")
+def image_mode(message):
+    msg = bot.send_message(message.chat.id, "Nima rasmini chizay? (Masalan: Nano banana) 🍌")
+    bot.register_next_step_handler(msg, generate_free_image)
 
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    if is_subscribed(message.from_user.id):
-        bot.send_message(
-            message.chat.id, 
-            f"Salom {message.from_user.first_name}! Botga xush kelibsiz.\nLink yuboring, videoni yuklab beraman.", 
-            reply_markup=main_menu()
-        )
-    else:
-        markup = types.InlineKeyboardMarkup()
-        btn_sub = types.InlineKeyboardButton("A'zo bo'lish 📢", url=f"https://t.me/{REQUIRED_CHANNEL[1:]}")
-        btn_check = types.InlineKeyboardButton("Tekshirish ✅", callback_data="check_sub")
-        markup.add(btn_sub)
-        markup.add(btn_check)
-        bot.send_message(message.chat.id, "Botdan foydalanish uchun kanalga a'zo bo'ling!", reply_markup=markup)
-
-@bot.message_handler(func=lambda m: m.text == "💻 Kompyuter dasturlari")
-def prog_link(message):
-    bot.send_message(message.chat.id, f"Guruhimizga qo'shiling: {PROG_CHANNEL_URL}")
-
-@bot.message_handler(func=lambda m: any(link in m.text for link in ["instagram.com", "tiktok.com", "youtube.com", "youtu.be"]))
-def handle_video(message):
-    if not is_subscribed(message.from_user.id):
-        bot.reply_to(message, "Avval kanalga a'zo bo'ling!")
-        return
-
-    wait = bot.reply_to(message, "Yuklanmoqda, kuting... 📥")
-    file_path = f"video_{message.chat.id}.mp4"
+def generate_free_image(message):
+    prompt = message.text.replace(" ", "%20")
+    wait = bot.reply_to(message, "Rasm chizilmoqda... ✨")
+    # Bepul rasm yaratish API
+    img_url = f"https://pollinations.ai/p/{prompt}?width=1024&height=1024&seed=42&model=flux"
     
-    ydl_opts = {
-        'format': 'best',
-        'outtmpl': file_path,
-        'quiet': True,
-        'no_warnings': True
-    }
-
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([message.text])
-        
-        with open(file_path, 'rb') as video:
-            bot.send_video(message.chat.id, video, caption="✅ Azat Bey bot orqali yuklandi")
-        
-        os.remove(file_path)
-        bot.delete_message(message.chat.id, wait.message_id)
-    except Exception as e:
-        bot.edit_message_text("❌ Xatolik! Link noto'g'ri yoki video hajmi juda katta.", message.chat.id, wait.message_id)
-        if os.path.exists(file_path): os.remove(file_path)
+        bot.send_photo(message.chat.id, img_url, caption=f"✅ Natija: {message.text}")
+    except:
+        bot.send_message(message.chat.id, "❌ Rasm yaratishda xatolik bo'ldi.")
+    bot.delete_message(message.chat.id, wait.message_id)
 
-@bot.callback_query_handler(func=lambda call: call.data == "check_sub")
-def check_callback(call):
-    if is_subscribed(call.from_user.id):
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-        bot.send_message(call.message.chat.id, "Rahmat! Endi botdan foydalanishingiz mumkin.", reply_markup=main_menu())
-    else:
-        bot.answer_callback_query(call.id, "Hali a'zo bo'lmadingiz! ❌", show_alert=True)
+# --- MEDIA VA CHAT ---
+@bot.message_handler(content_types=['text', 'video', 'video_note'])
+def handle_all(message):
+    if message.text:
+        # Link bo'lsa video/audio yuklash
+        if any(x in message.text for x in ["instagram.com", "tiktok.com", "youtube.com", "youtu.be"]):
+            wait = bot.reply_to(message, "Yuklanmoqda... 📥")
+            is_mp3 = "mp3" in message.text.lower()
+            file_path = f"f_{message.chat.id}.{'mp3' if is_mp3 else 'mp4'}"
+            ydl_opts = {'format': 'bestaudio/best' if is_mp3 else 'best', 'outtmpl': file_path, 'quiet': True}
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl: ydl.download([message.text])
+                with open(file_path, 'rb') as f:
+                    if is_mp3: bot.send_audio(message.chat.id, f)
+                    else: bot.send_video(message.chat.id, f)
+                os.remove(file_path)
+            except: bot.send_message(message.chat.id, "Xato!")
+            bot.delete_message(message.chat.id, wait.message_id)
+        
+        # Shunchaki matn bo'lsa - Bepul GPT javob beradi
+        else:
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": message.text}],
+                )
+                bot.reply_to(message, response.choices[0].message.content)
+            except:
+                bot.reply_to(message, "AI hozir biroz band, keyinroq urinib ko'ring.")
 
-# --- ISHGA TUSHIRISH ---
+    # Aylana video funksiyalari (avvalgidek qoladi)
+    elif message.content_type == 'video_note':
+        file_info = bot.get_file(message.video_note.file_id)
+        bot.send_video(message.chat.id, bot.download_file(file_info.file_path))
+    elif message.content_type == 'video':
+        file_info = bot.get_file(message.video.file_id)
+        bot.send_video_note(message.chat.id, bot.download_file(file_info.file_path))
+
+# --- START ---
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.send_message(message.chat.id, "Salom Sardor! Bepul AI Bot tayyor. 🚀", reply_markup=main_menu())
+
 if __name__ == "__main__":
     keep_alive()
-    print("Bot 24/7 rejimda ishga tushdi!")
     bot.infinity_polling()
