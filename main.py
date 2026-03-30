@@ -1,85 +1,107 @@
 import telebot
-from telebot import types
-import yt_dlp
 import os
+import yt_dlp
+from telebot import types
+from flask import Flask
+from threading import Thread
 
-TOKEN = "8613087756:AAHsVgfWRoeg_FkBe5CxnuqMC69kb--SZw0"
+# --- RENDER UCHUN WEB SERVER (O'CHIB QOLMASLIGI UCHUN) ---
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Azat Bey Bot is Live!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+# --- ASOSIY MA'LUMOTLAR ---
+TOKEN = '8764022556:AAGblrMJUH3gkAdwJUgiJOmoZQTwtc4v5uo'
+REQUIRED_CHANNEL = '@bass_music_33'
+PROG_CHANNEL_URL = 'https://t.me/kompyuter_dasturi_001'
 
 bot = telebot.TeleBot(TOKEN)
 
-# 🎵 BASS
-def bass_boost(inp, out, level):
-    os.system(f'ffmpeg -i "{inp}" -af "bass=g={level}" "{out}"')
+# --- DOIMIY TUGMA (REPLY KEYBOARD) ---
+def main_menu():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn = types.KeyboardButton("💻 Kompyuter dasturlari")
+    markup.add(btn)
+    return markup
 
-# 🎧 3D
-def audio_3d(inp, out):
-    os.system(f'ffmpeg -i "{inp}" -af "apulsator=hz=0.08" "{out}"')
+# --- OBUNANI TEKSHIRISH FUNKSIYASI ---
+def is_subscribed(user_id):
+    try:
+        status = bot.get_chat_member(REQUIRED_CHANNEL, user_id).status
+        return status in ['member', 'administrator', 'creator']
+    except:
+        return False
 
-# 🚀 START
+# --- BUYRUQLAR VA XABARLAR ---
+
 @bot.message_handler(commands=['start'])
-def start(message):
-    bot.send_message(message.chat.id, "🔗 Link yubor (YouTube / Instagram / TikTok)")
+def send_welcome(message):
+    if is_subscribed(message.from_user.id):
+        bot.send_message(
+            message.chat.id, 
+            f"Salom {message.from_user.first_name}! Botga xush kelibsiz.\nLink yuboring, videoni yuklab beraman.", 
+            reply_markup=main_menu()
+        )
+    else:
+        markup = types.InlineKeyboardMarkup()
+        btn_sub = types.InlineKeyboardButton("A'zo bo'lish 📢", url=f"https://t.me/{REQUIRED_CHANNEL[1:]}")
+        btn_check = types.InlineKeyboardButton("Tekshirish ✅", callback_data="check_sub")
+        markup.add(btn_sub)
+        markup.add(btn_check)
+        bot.send_message(message.chat.id, "Botdan foydalanish uchun kanalga a'zo bo'ling!", reply_markup=markup)
 
-# 🔗 MENU
-@bot.message_handler(func=lambda m: True)
-def menu(message):
-    url = message.text
+@bot.message_handler(func=lambda m: m.text == "💻 Kompyuter dasturlari")
+def prog_link(message):
+    bot.send_message(message.chat.id, f"Guruhimizga qo'shiling: {PROG_CHANNEL_URL}")
 
-    markup = types.InlineKeyboardMarkup()
-    markup.add(
-        types.InlineKeyboardButton("🎥 Video", callback_data=f"video|{url}"),
-        types.InlineKeyboardButton("🎵 MP3", callback_data=f"mp3|{url}")
-    )
-    markup.add(
-        types.InlineKeyboardButton("🔊 Bass", callback_data=f"bass|{url}"),
-        types.InlineKeyboardButton("🎧 3D", callback_data=f"3d|{url}")
-    )
+@bot.message_handler(func=lambda m: any(link in m.text for link in ["instagram.com", "tiktok.com", "youtube.com", "youtu.be"]))
+def handle_video(message):
+    if not is_subscribed(message.from_user.id):
+        bot.reply_to(message, "Avval kanalga a'zo bo'ling!")
+        return
 
-    bot.send_message(message.chat.id, "👇 Tanlang:", reply_markup=markup)
-
-# ⬇️ YUKLASH
-@bot.callback_query_handler(func=lambda c: "|" in c.data)
-def download(call):
-    action, url = call.data.split("|")
-    bot.answer_callback_query(call.id, "⏳ Yuklanmoqda...")
+    wait = bot.reply_to(message, "Yuklanmoqda, kuting... 📥")
+    file_path = f"video_{message.chat.id}.mp4"
+    
+    ydl_opts = {
+        'format': 'best',
+        'outtmpl': file_path,
+        'quiet': True,
+        'no_warnings': True
+    }
 
     try:
-        ydl_opts = {'format': 'best', 'outtmpl': 'file.%(ext)s'}
-
-        if action in ["mp3", "bass", "3d"]:
-            ydl_opts = {
-                'format': 'bestaudio',
-                'outtmpl': 'audio.%(ext)s',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3'
-                }]
-            }
-
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-
-        for f in os.listdir():
-            if action == "video" and f.startswith("file"):
-                bot.send_video(call.message.chat.id, open(f, "rb"))
-                os.remove(f)
-
-            elif action == "mp3" and f.endswith(".mp3"):
-                bot.send_audio(call.message.chat.id, open(f, "rb"))
-                os.remove(f)
-
-            elif action == "bass" and f.endswith(".mp3"):
-                bass_boost(f, "bass.mp3", 10)
-                bot.send_audio(call.message.chat.id, open("bass.mp3", "rb"))
-                os.remove(f); os.remove("bass.mp3")
-
-            elif action == "3d" and f.endswith(".mp3"):
-                audio_3d(f, "3d.mp3")
-                bot.send_audio(call.message.chat.id, open("3d.mp3", "rb"))
-                os.remove(f); os.remove("3d.mp3")
-
+            ydl.download([message.text])
+        
+        with open(file_path, 'rb') as video:
+            bot.send_video(message.chat.id, video, caption="✅ Azat Bey bot orqali yuklandi")
+        
+        os.remove(file_path)
+        bot.delete_message(message.chat.id, wait.message_id)
     except Exception as e:
-        bot.send_message(call.message.chat.id, f"❌ Xato: {e}")
+        bot.edit_message_text("❌ Xatolik! Link noto'g'ri yoki video hajmi juda katta.", message.chat.id, wait.message_id)
+        if os.path.exists(file_path): os.remove(file_path)
 
-print("🔥 BOT ISHGA TUSHDI")
-bot.infinity_polling()
+@bot.callback_query_handler(func=lambda call: call.data == "check_sub")
+def check_callback(call):
+    if is_subscribed(call.from_user.id):
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        bot.send_message(call.message.chat.id, "Rahmat! Endi botdan foydalanishingiz mumkin.", reply_markup=main_menu())
+    else:
+        bot.answer_callback_query(call.id, "Hali a'zo bo'lmadingiz! ❌", show_alert=True)
+
+# --- ISHGA TUSHIRISH ---
+if __name__ == "__main__":
+    keep_alive()
+    print("Bot 24/7 rejimda ishga tushdi!")
+    bot.infinity_polling()
