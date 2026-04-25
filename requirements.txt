@@ -1,6 +1,2 @@
 pyTelegramBotAPI
-yt-dlp
-flask
-gunicorn
-requests
-pydub
+instaloader
