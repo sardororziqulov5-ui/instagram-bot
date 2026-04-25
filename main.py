@@ -4,7 +4,7 @@ import instaloader
 import os
 import subprocess
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # TOKENNI ENV GA QO‘Y
+BOT_TOKEN = os.getenv("8098097569:AAGP9XoDKtB_JWp14G8IrmBp96kRdYIDf08")  # TOKENNI ENV GA QO‘Y
 bot = telebot.TeleBot(BOT_TOKEN)
 
 L = instaloader.Instaloader(download_pictures=True, download_videos=True)
