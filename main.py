@@ -11,9 +11,10 @@ if not BOT_TOKEN:
     exit()
 
 bot = telebot.TeleBot(BOT_TOKEN)
+
 user_links = {}
 
-# 🔐 OBUNA TEKSHIRISH
+# OBUNA TEKSHIRISH
 def check_sub(user_id):
     try:
         status = bot.get_chat_member(CHANNEL, user_id).status
@@ -21,7 +22,7 @@ def check_sub(user_id):
     except:
         return False
 
-# 🚀 START
+# START
 @bot.message_handler(commands=['start'])
 def start(message):
     if not check_sub(message.from_user.id):
@@ -34,7 +35,7 @@ def start(message):
 
     bot.send_message(message.chat.id, "Instagram link yubor 📥")
 
-# 🔁 CHECK BUTTON
+# CHECK BUTTON
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
 def recheck(call):
     if check_sub(call.from_user.id):
@@ -43,7 +44,7 @@ def recheck(call):
     else:
         bot.answer_callback_query(call.id, "❌ Obuna yo‘q")
 
-# 🔗 LINK QABUL
+# LINK QABUL
 @bot.message_handler(func=lambda m: m.text and "instagram.com" in m.text)
 def handle_link(message):
     if not check_sub(message.from_user.id):
@@ -58,7 +59,7 @@ def handle_link(message):
 
     bot.send_message(message.chat.id, "Tanlang:", reply_markup=markup)
 
-# 🎬 VIDEO + QORA PANEL + WATERMARK
+# VIDEO YUKLASH
 @bot.callback_query_handler(func=lambda call: call.data == "video")
 def send_video(call):
     url = user_links.get(call.from_user.id)
@@ -68,44 +69,24 @@ def send_video(call):
         return
 
     try:
-        # ⬇️ Yuklash
+        filename = "video.mp4"
+
         subprocess.run([
             "yt-dlp",
-            "-o", "video.%(ext)s",
-            "--no-playlist",
+            "-f", "mp4",
+            "-o", filename,
             url
         ])
 
-        # 📁 Faylni topish
-        for file in os.listdir():
-            if file.startswith("video") and file.endswith(".mp4"):
-
-                output = "final.mp4"
-
-                # 🎨 QORA PANEL + TEXT
-                subprocess.run([
-                    "ffmpeg",
-                    "-i", file,
-                    "-vf",
-                    "drawbox=x=0:y=h-70:w=iw:h=70:color=black@0.8:t=fill,"
-                    "drawtext=text='insta_downlbot':x=(w-text_w)/2:y=h-45:fontsize=30:fontcolor=white",
-                    "-codec:a", "copy",
-                    output
-                ])
-
-                # 📤 Yuborish
-                with open(output, "rb") as f:
-                    bot.send_video(call.message.chat.id, f)
-
-                # 🧹 Tozalash
-                os.remove(file)
-                os.remove(output)
-                return
-
-        bot.send_message(call.message.chat.id, "❌ Yuklab bo‘lmadi")
+        if os.path.exists(filename):
+            with open(filename, "rb") as f:
+                bot.send_video(call.message.chat.id, f)
+            os.remove(filename)
+        else:
+            bot.send_message(call.message.chat.id, "❌ Yuklab bo‘lmadi")
 
     except Exception as e:
         bot.send_message(call.message.chat.id, f"Xato: {e}")
 
-print("🤖 Bot ishlayapti...")
+print("✅ Bot ishlayapti...")
 bot.infinity_polling()
