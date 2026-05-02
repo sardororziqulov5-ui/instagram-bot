@@ -3,8 +3,12 @@ from telebot import types
 import subprocess
 import os
 
-BOT_TOKEN = os.getenv("8098097569:AAGP9XoDKtB_JWp14G8IrmBp96kRdYIDf08")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL = "@bass_music_33"
+
+if not BOT_TOKEN:
+    print("❌ BOT_TOKEN topilmadi!")
+    exit()
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -84,5 +88,5 @@ def send_video(call):
     except Exception as e:
         bot.send_message(call.message.chat.id, f"Xato: {e}")
 
-print("Bot ishlayapti...")
+print("✅ Bot ishlayapti...")
 bot.infinity_polling()
