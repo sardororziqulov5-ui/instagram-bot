@@ -6,7 +6,7 @@ import os
 BOT_TOKEN = os.getenv("8098097569:AAGP9XoDKtB_JWp14G8IrmBp96kRdYIDf08")
 CHANNEL = "@bass_music_33"
 
-bot = telebot.TeleBot(BOT_TOKEN)
+bot = telebot.TeleBot(8098097569:AAGP9XoDKtB_JWp14G8IrmBp96kRdYIDf08)
 
 user_links = {}
 
