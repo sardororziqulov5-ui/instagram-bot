@@ -1,6 +1,6 @@
 import telebot
 from telebot import types
-import subprocess
+import requests
 import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -8,7 +8,6 @@ CHANNEL = "@bass_music_33"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# OBUNA TEKSHIRISH
 def check_sub(user_id):
     try:
         status = bot.get_chat_member(CHANNEL, user_id).status
@@ -16,7 +15,6 @@ def check_sub(user_id):
     except:
         return False
 
-# START
 @bot.message_handler(commands=['start'])
 def start(message):
     if not check_sub(message.from_user.id):
@@ -29,7 +27,6 @@ def start(message):
 
     bot.send_message(message.chat.id, "📥 Instagram link yubor")
 
-# TEKSHIRISH
 @bot.callback_query_handler(func=lambda call: call.data == "check")
 def check(call):
     if check_sub(call.from_user.id):
@@ -38,35 +35,24 @@ def check(call):
     else:
         bot.answer_callback_query(call.id, "❌ Hali obuna emassan")
 
-# LINK QABUL
 @bot.message_handler(func=lambda m: m.text and "instagram.com" in m.text)
-def download_video(message):
+def download(message):
     if not check_sub(message.from_user.id):
         start(message)
         return
 
     url = message.text.strip()
-    filename = "video.mp4"
-
     bot.send_message(message.chat.id, "⏳ Yuklanmoqda...")
 
     try:
-        subprocess.run([
-            "yt-dlp",
-            "-f", "mp4",
-            "-o", filename,
-            url
-        ])
+        api = f"https://api.savetube.me/instagram?url={url}"
+        res = requests.get(api).json()
 
-        if os.path.exists(filename):
-            with open(filename, "rb") as f:
-                bot.send_video(message.chat.id, f)
-            os.remove(filename)
-        else:
-            bot.send_message(message.chat.id, "❌ Yuklab bo‘lmadi")
+        video_url = res["data"]["video"]
+
+        bot.send_video(message.chat.id, video_url)
 
     except Exception as e:
-        bot.send_message(message.chat.id, f"❌ Xato: {e}")
+        bot.send_message(message.chat.id, "❌ Yuklab bo‘lmadi videoda xato bor")
 
-print("✅ Bot ishlayapti...")
 bot.infinity_polling()
